@@ -1,0 +1,85 @@
+# Redis Transactions
+
+```cardlink
+
+url: https://redis.io/docs/latest/develop/interact/transactions/
+
+title: "Transactions"
+
+description: "How transactions work in Redis"
+
+host: redis.io
+
+favicon: https://redis.io/docs/latest/images/favicons/favicon-196x196.png
+
+```
+redis에서의 트랜잭션 개념은 명령어 그룹을 한 번에 실행하는 것으로, MULTI, EXEC, DISCARD 및 WATCH 명령을 중심으로 합니다.
+
+redis 트랜잭션은 다음과 같은 중요한 특징을 가집니다.
+
+1. 트랜잭션의 모든 명령은 직렬화되어 순차적으로 실행되며, 다른 클라이언트가 보낸 요청은 트랜잭션 실행 중간에 끼어들 수 없습니다. 따라서 명령 작업이 하나의 격리된 작업으로 실행되는 것이 보장됩니다.
+2. 여러 명령어들은 순차적으로 큐에 대기하게 되는데, EXEC 명령이 실행되어야 비로소 큐 내부 명령어들이 실제로 실행됩니다. 따라서 EXEC 명령 실행 이전에 서버와의 연결이 끊어지는 경우에는 아무 명령어도 실행되지 않습니다.
+3. redis 트랜잭션은 롤백을 지원하지 않습니다.
+	1. EXEC로 큐에 담겨있는 명령어를 실행하던 도중 일부 작업이 실패하더라도 나머지 작업은 실행됩니다.
+## MULTI & EXEC 사용 예
+```
+
+> MULTI
+
+OK
+
+> INCR foo
+
+QUEUED
+
+> INCR bar
+
+QUEUED
+
+> EXEC
+
+1) (integer) 1
+
+2) (integer) 1
+
+```
+
+1. MULTI 명령을 사용하여 트랜잭션을 시작합니다
+2. 이제 여러가지 명령을 입력하여 실행 대기시킬 수 있습니다
+3. 명령들은 바로 실행되는 것이 아니라 큐에 대기합니다 (QUEUED)
+4. EXEC 명령어를 호출하여 큐 내부 명령들을 실행합니다
+## WATCH & 낙관적 락
+> WATCH : EXEC를 조건부로 만드는 명령어. EXEC 명령 시에 WATCH 된 키가 수정되지 않은 경우에만 트랜잭션을 수행하도록 한다. 클라이언트가 수행하는 수정 뿐 아니라, TTL 만료 등과 같이 redis에 의한 수정 둘 다 포함된다.
+- WATCH 명령어를 이용해 check-and-set 동작을 실행하여 낙관적 락을 구현할 수 있습니다.
+- WATCH하게 되면 해당 키값의 변경 여부가 모니터링되기 때문에, EXEC 명령 전에 WATCH 키가 변경되면 전체 트랜잭션이 중단되고 실패를 의미하는 Null 응답을 반환합니다.
+- 만일 트랜잭션 큐 내부에 있는 명령어가 WATCH 키를 수정하는 명령인 경우, 아직 실행되지 않았기 때문에 EXEC에 영향을 미치지 않습니다.
+
+```
+
+val = GET mykey
+
+val = val + 1
+
+SET mykey $val
+
+```
+위와 같은 코드는 경쟁 조건이 발생합니다.
+
+구체적 예시를 들자면 클라이언트 A가 +1 하기 전에 클라이언트 B가 동일한 명령을 수행하기 시작하면 최종 mykey는 12가 아닌 11로 잘못된 결과가 저장됩니다.
+
+```
+
+WATCH mykey
+
+val = GET mykey
+
+val = val + 1
+
+MULTI
+
+SET mykey $val
+
+EXEC
+
+```
+하지만 이렇게 WATCH와 트랜잭션을 이용하게 되면 mykey값을 다른 클라이언트에서 수정했을 때 트랜잭션이 실패하고, 이후 다시 시도하여 올바른 값을 저장할 수 있습니다. (낙관적 잠금)
