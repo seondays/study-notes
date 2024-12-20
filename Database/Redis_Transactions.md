@@ -1,18 +1,7 @@
 # Redis Transactions
+공식 문서 [Transactions](https://redis.io/docs/latest/develop/interact/transactions/)을 읽고 학습한 문서입니다.
 
-```cardlink
-
-url: https://redis.io/docs/latest/develop/interact/transactions/
-
-title: "Transactions"
-
-description: "How transactions work in Redis"
-
-host: redis.io
-
-favicon: https://redis.io/docs/latest/images/favicons/favicon-196x196.png
-
-```
+## 기본 개념
 redis에서의 트랜잭션 개념은 명령어 그룹을 한 번에 실행하는 것으로, MULTI, EXEC, DISCARD 및 WATCH 명령을 중심으로 합니다.
 
 redis 트랜잭션은 다음과 같은 중요한 특징을 가집니다.
