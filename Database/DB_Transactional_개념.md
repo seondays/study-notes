@@ -1,3 +1,4 @@
+[Transaction in DBMS - GeeksforGeeks](https://www.geeksforgeeks.org/transaction-in-dbms/)를 참고하여 학습한 문서입니다.
 ## 데이터베이스 트랜잭션이란?
 >논리적으로 관련된 일련의 작업들이 하나의 단위로 실행되는 것을 의미하는 개념
 >데이터베이스가 일관적이고 안정적으로 유지되도록 보장한다.
